@@ -1,17 +1,20 @@
 import React, { useRef, useState } from "react";
 import { Form, Field } from "react-final-form";
 import { Input, Button } from "antd";
+import { ArrowLeftOutlined } from "@ant-design/icons";
 import { CopyOutlined } from "@ant-design/icons";
 import { CopyToClipboard } from "react-copy-to-clipboard";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./buyNumber.scss";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const BuyNumber = () => {
   const [loading, setLoading] = useState(false);
   const [timerValues, setTimerValues] = useState([60, 60, 60, 60, 60]);
   const timersRef = useRef([]);
+  const navigate = useNavigate();
 
   const cancelNumber = async (index, form, values) => {
     try {
@@ -168,13 +171,27 @@ const BuyNumber = () => {
 
   return (
     <div className="form-list-container">
+      <div className="back-btn">
+        <Button
+          onClick={() => navigate(-1)}
+          style={{ background: "#306DCE", color: "#fff" }}
+        >
+          <ArrowLeftOutlined /> Back
+        </Button>
+      </div>
       <Form
         onSubmit={() => {}}
         render={({ handleSubmit, form, values }) => (
           <form onSubmit={handleSubmit}>
             <div className="button-and-balance">
               <div>Points - 50</div>
-              <Button>Audit</Button>
+              <Button
+                onClick={() => navigate("/audit")}
+                style={{ background: "#306DCE" }}
+                type="primary"
+              >
+                Audit
+              </Button>
             </div>
             <h1>Generate OTP for betvet (₹ 7 )</h1>
             {[0, 1, 2, 3, 4].map((index) => (
