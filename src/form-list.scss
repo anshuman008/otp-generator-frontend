@@ -1,0 +1,109 @@
+// LoginForm.scss
+.form-container {
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.login-form {
+  width: 310px;
+  margin: auto;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  box-shadow: 0 0 16px 0px rgb(178 176 176 / 50%);
+
+  .ant-btn,
+  .ant-btn:hover,
+  .ant-btn:focus,
+  .ant-btn:disabled {
+    background-color: #47b49c;
+    background: #47b49c;
+    border-color: #47b49c;
+  }
+
+  label {
+    font-size: 13px;
+  }
+  input {
+    border: 1px solid #d8d8d8;
+    border-radius: 4px;
+  }
+
+  h2 {
+    text-align: center;
+  }
+
+  form {
+    display: flex;
+    flex-direction: column;
+
+    label {
+      margin-bottom: 10px;
+
+      input {
+        width: 100%;
+        padding: 8px;
+        box-sizing: border-box;
+        margin-top: 4px;
+      }
+    }
+
+    .spin-style {
+      text-align: center;
+      height: 120px;
+      align-items: center;
+      display: flex;
+      border: 1px solid #d8d8d8;
+      justify-content: center;
+      width: 351px;
+    }
+    button {
+      background-color: #306DCE;
+      color: #fff;
+      padding: 10px;
+      margin-top: 10px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+
+      &:hover {
+        background-color: #0056b3;
+      }
+    }
+    button:hover {
+      background-color: #306DCE;
+    }
+  }
+
+  .captcha {
+    margin-top: 15px;
+
+    img {
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+      margin-top: 8px;
+    }
+  }
+
+  .audit-list {
+    margin-top: 20px;
+    list-style: none;
+    padding: 0;
+
+    li {
+      background-color: #f8f9fa;
+      padding: 10px;
+      margin-bottom: 5px;
+      border-radius: 5px;
+    }
+  }
+}

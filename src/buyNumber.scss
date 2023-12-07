@@ -1,0 +1,89 @@
+.form-list-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  height: 100%;
+
+  form {
+    position: relative;
+
+    .button-and-balance {
+      display: flex;
+      gap: 10px;
+      position: absolute;
+      right: 10px;
+      top: -10px;
+      align-items: center;
+      gap: 20px;
+  
+    }
+  }
+
+  .row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+    align-items: center;
+  
+    .ant-btn {
+      border-color: #306DCE;
+      background: #306DCE;
+      color: #fff;
+    }
+    .ant-btn:disabled {
+        opacity: 0.6;
+    }
+  }
+
+  form {
+    // width: calc(100% - 100px);
+
+    .timer {
+        width: 46px;
+    }
+    h1 {
+        margin-bottom: 50px;
+    }
+
+    input:hover, input:focus {
+        border: 1px solid #d9d9d9;
+        box-shadow: unset;
+    }
+    input {
+        border-radius: 6px;
+    }
+    input:disabled {
+        color: #000;
+    }
+    .ant-input-group-addon {
+        border-radius: 6px;
+    }
+
+    .ant-btn-default:not(:disabled):not(.ant-btn-disabled):hover {
+      border-color: #306DCE;
+      background: #306DCE;
+      color: #fff;
+    }
+    .ant-btn:hover,
+    .ant-btn:focus,
+    .ant-btn:active {
+      border-color: #306DCE;
+      background: #306DCE;
+      color: #fff;
+    }
+
+    .ant-btn-icon-only {
+      z-index: 99;
+      border-radius: 5px;
+    }
+    .ant-input-group-addon:last-child {
+      position: absolute;
+      right: 22px;
+      border-radius: 6px;
+      padding: 0;
+      border: none;
+      top: 0;
+    }
+  }
+}
