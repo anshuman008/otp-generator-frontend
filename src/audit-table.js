@@ -22,7 +22,7 @@ const AuditTable = () => {
 
   useEffect(() => {
     // Make your initial API call here
-    fetch("http://localhost:5001/user/me/logs", {
+    fetch("https://nodejsclusters-157156-0.cloudclusters.net/user/me/logs", {
       headers: { Authorization: `Bearer ${isUser}` },
     })
       .then((response) => response.json())

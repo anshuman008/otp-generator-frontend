@@ -4,7 +4,7 @@ import "./form-list.scss";
 import { Spin } from "antd";
 import { Navigate } from 'react-router-dom';
 import { ReloadOutlined } from "@ant-design/icons";
-const API_URL = "http://localhost:5001";
+const API_URL = "https://nodejsclusters-157156-0.cloudclusters.net";
 
 const FormList = () => {
   const [adminBool, setAdminBool] = useState(false);
@@ -36,8 +36,6 @@ const UserLogin = () => {
   const [captchaImage, setCaptchaImage] = useState("");
   const navigate = useNavigate();
   const [errors, setErrors] = useState({});
-  const[verified, setVerified] = useState(false);
-
 
   useEffect(() => {
     fetchCaptchaImage();
@@ -51,7 +49,7 @@ const UserLogin = () => {
 
   const fetchCaptchaImage = async () => {
     try {
-      const response = await fetch("/captcha");
+      const response = await fetch(API_URL + "/captcha");
       const blob = await response.blob();
       const captchaUrl = URL.createObjectURL(blob);
       setCaptchaImage(captchaUrl);
@@ -76,8 +74,7 @@ const UserLogin = () => {
     }
 
     try {
-      console.log(captcha, "captcha");
-      const response = await fetch("/verify-captcha", {
+      const response = await fetch(API_URL + "/verify-captcha", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -178,7 +175,7 @@ const AdminLogin = () => {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const API_URL = "http://localhost:5001";
+  const API_URL = "https://nodejsclusters-157156-0.cloudclusters.net";
 
   const handleSubmit = async (e) => {
     // navigate("/listing");

@@ -34,7 +34,7 @@ const BuyNumber = () => {
 
   useEffect(() => {
     // Make your initial API call here
-    fetch("http://localhost:5001/user/me", {
+    fetch("https://nodejsclusters-157156-0.cloudclusters.net/user/me", {
       headers: { Authorization: `Bearer ${userToken}` },
     })
       .then((response) => response.json())
@@ -45,7 +45,7 @@ const BuyNumber = () => {
           while (!newPass) {
             newPass = prompt("Enter your new password");
           }
-          fetch("http://localhost:5001/user/me", {
+          fetch("https://nodejsclusters-157156-0.cloudclusters.net/user/me", {
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${userToken}`,
@@ -81,7 +81,7 @@ const BuyNumber = () => {
       clearInterval(timersRef.current[index]);
 
       const cancelResponse = values?.activationId[index]
-        ? await axios.get("http://localhost:5001/api/cancelNumber", {
+        ? await axios.get("https://nodejsclusters-157156-0.cloudclusters.net/api/cancelNumber", {
             params: {
               id: values?.activationId[index],
               phoneNumber: values?.number[index],
@@ -157,7 +157,7 @@ const BuyNumber = () => {
     timersRef.current[index] = setInterval(async () => {
       try {
         const otpResponse = await axios.get(
-          "http://localhost:5001/api/getOtp",
+          "https://nodejsclusters-157156-0.cloudclusters.net/api/getOtp",
           {
             params: {
               id: activationNum,
@@ -220,7 +220,7 @@ const BuyNumber = () => {
       setLoading(true);
       disableCancelButton(index);
 
-      const response = await axios.get("http://localhost:5001/api/getNumber", {
+      const response = await axios.get("https://nodejsclusters-157156-0.cloudclusters.net/api/getNumber", {
         headers: { Authorization: `Bearer ${userToken}` },
       });
       const numberSequence = response.data?.data.split(":").pop().substring(2);

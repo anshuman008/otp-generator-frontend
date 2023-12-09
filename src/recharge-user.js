@@ -9,7 +9,7 @@ const RechargeUser = () => {
   const isAdmin = localStorage.getItem("admin");
   const navigate = useNavigate()
 
-  const API_URL = "http://localhost:5001";
+  const API_URL = "https://nodejsclusters-157156-0.cloudclusters.net";
 
   const handleSubmit = async (e) => {
     // navigate("/listing");
