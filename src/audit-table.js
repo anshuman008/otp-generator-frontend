@@ -1,103 +1,74 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Table, Input, Pagination, Button } from "antd";
-import { CheckCircleOutlined, CloseCircleOutlined, CopyOutlined } from "@ant-design/icons";
-import './audit-table.scss';
-import { ArrowLeftOutlined } from '@ant-design/icons'
+import {
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  CopyOutlined,
+} from "@ant-design/icons";
+import "./audit-table.scss";
+import { ArrowLeftOutlined } from "@ant-design/icons";
 import { CopyToClipboard } from "react-copy-to-clipboard";
-import { useNavigate } from 'react-router-dom';
-
-const data = [
-  {
-    key: "1",
-    date: "2/12/2023 17:4:29",
-    service: "irctc",
-    price: 8,
-    mobile: "9876543210",
-    status: "success", // 'success' or 'error'
-    otp: "123456",
-  },
-  {
-    key: "2",
-    date: "2/12/2023 17:4:29",
-    service: "irctc",
-    price: 8,
-    mobile: "9876543210",
-    status: "success", // 'success' or 'error'
-    otp: "123456",
-  },
-  {
-    key: "3",
-    date: "2/12/2023 17:4:29",
-    service: "irctc",
-    price: 8,
-    mobile: "9876543210",
-    status: "success", // 'success' or 'error'
-    otp: "123456",
-  },
-  {
-    key: "4",
-    date: "2/12/2023 17:4:29",
-    service: "irctc",
-    price: 8,
-    mobile: "9876543210",
-    status: "failed", // 'success' or 'error'
-    otp: "123456",
-  },
-  {
-    key: "5",
-    date: "2/12/2023 17:4:29",
-    service: "irctc",
-    price: 8,
-    mobile: "9876543210",
-    status: "success", // 'success' or 'error'
-    otp: "123456",
-  },
-  {
-    key: "6",
-    date: "2/12/2023 17:4:29",
-    service: "irctc",
-    price: 8,
-    mobile: "9876543210",
-    status: "success", // 'success' or 'error'
-    otp: "123456",
-  }
-];
+import { useNavigate } from "react-router-dom";
 
 const AuditTable = () => {
-    const navigate = useNavigate();
+  const navigate = useNavigate();
+  const [apiData, setApiData] = useState([]);
+  const isUser = localStorage.getItem("user");
 
-    const handleCopy = (text) => {
-        // Copy text to clipboard
-        navigator.clipboard.writeText(text);
-      };
+  const handleCopy = (text) => {
+    // Copy text to clipboard
+    navigator.clipboard.writeText(text);
+  };
+
+  useEffect(() => {
+    // Make your initial API call here
+    fetch("http://localhost:5001/user/me/logs", {
+      headers: { Authorization: `Bearer ${isUser}` },
+    })
+      .then((response) => response.json())
+      .then((data) => setApiData(data))
+      .catch((error) => console.error("Error fetching data:", error));
+  }, []);
+
   const columns = [
     {
       title: "Date",
-      dataIndex: "date",
-      key: "date",
+      dataIndex: "createdAt",
+      key: "createdAt",
     },
     {
       title: "Service",
-      dataIndex: "service",
-      key: "service",
+      dataIndex: "optGenerratedFor",
+      key: "optGenerratedFor",
     },
     {
       title: "Price",
-      dataIndex: "price",
-      key: "price",
+      dataIndex: "amount",
+      key: "amount",
     },
     {
       title: "Mobile",
-      dataIndex: "mobile",
-      key: "mobile",
-      render: (text) => <Input addonAfter={<CopyOutlined style={{ cursor: 'pointer' }} onClick={() => handleCopy(text)} />} value={text} disabled />,
+      dataIndex: "phoneNumber",
+      key: "phoneNumber",
+      render: (text) => (
+        <Input
+          addonAfter={
+            <CopyOutlined
+              style={{ cursor: "pointer" }}
+              onClick={() => handleCopy(text)}
+            />
+          }
+          value={text}
+          disabled
+        />
+      ),
     },
     {
       title: "Status",
       dataIndex: "status",
       key: "status",
       render: (status) =>
-        status === "success" ? (
+        status === ("success") ? (
           <CheckCircleOutlined style={{ color: "green" }} />
         ) : (
           <CloseCircleOutlined style={{ color: "red" }} />
@@ -122,17 +93,22 @@ const AuditTable = () => {
 
   return (
     <div className="table-container">
-         <div className="back-btn">
-      <Button onClick={() => navigate(-1)} style={{ background: "#306DCE", color: '#fff' }}><ArrowLeftOutlined /> Back</Button>
+      <div className="back-btn">
+        <Button
+          onClick={() => navigate(-1)}
+          style={{ background: "#306DCE", color: "#fff" }}
+        >
+          <ArrowLeftOutlined /> Back
+        </Button>
       </div>
-     <div className="inner-div">
-     <div className="otp-heading">OTP History</div>
-      <Table columns={columns} dataSource={data} pagination={false} />
-      <Pagination
-        total={data.length}
-        showTotal={(total) => `Total ${total} items`}
-      />
-     </div>
+      <div className="inner-div">
+        <div className="otp-heading">OTP History</div>
+        <Table style={{ height: 'calc(100% - 200px)', overflow: 'auto' }} columns={columns} dataSource={apiData} pagination={false} />
+        <Pagination
+          total={apiData.length}
+          showTotal={(total) => `Total ${total} items`}
+        />
+      </div>
     </div>
   );
 };

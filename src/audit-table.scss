@@ -3,9 +3,11 @@
   width: 100%;
   display: flex;
   justify-content: center;
+  .ant-pagination {
+    padding-top: 20px;
+  }
   .ant-table-wrapper table {
     border: 1px solid #ededed;
-    margin: 40px 0;
 
     .ant-input-group-addon:last-child {
       background: #306dce;
@@ -21,6 +23,7 @@
 
     .otp-heading {
       text-align: left;
+      padding-bottom: 30px;
       font-size: 24px;
       font-weight: 700;
       width: 100%;
@@ -35,4 +38,11 @@
       right: 50px;
       top: 50px;
     }
+  }
+  .logout-btn {
+    background: rgb(48, 109, 206);
+    position: absolute;
+    top: 10px;
+    color: #fff;
+    right: 50px;
   }

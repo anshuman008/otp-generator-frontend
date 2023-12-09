@@ -1,7 +1,7 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Form, Field } from "react-final-form";
 import { Input, Button } from "antd";
-import { ArrowLeftOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, LogoutOutlined } from "@ant-design/icons";
 import { CopyOutlined } from "@ant-design/icons";
 import { CopyToClipboard } from "react-copy-to-clipboard";
 import { toast, ToastContainer } from "react-toastify";
@@ -15,6 +15,64 @@ const BuyNumber = () => {
   const [timerValues, setTimerValues] = useState([60, 60, 60, 60, 60]);
   const timersRef = useRef([]);
   const navigate = useNavigate();
+  const [apiData, setApiData] = useState([]);
+  const userToken = localStorage.getItem("user");
+  const [resendButtonEnabled, setResendButtonEnabled] = useState([
+    false,
+    false,
+    false,
+    false,
+    false,
+  ]);
+  const [cancelButtonEnabled, setCancelButtonEnabled] = useState([
+    false,
+    false,
+    false,
+    false,
+    false,
+  ]);
+
+  useEffect(() => {
+    // Make your initial API call here
+    fetch("http://localhost:5001/user/me", {
+      headers: { Authorization: `Bearer ${userToken}` },
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        setApiData(data);
+        if (data?.error) {
+          let newPass = prompt("Enter your new password");
+          while (!newPass) {
+            newPass = prompt("Enter your new password");
+          }
+          fetch("http://localhost:5001/user/me", {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${userToken}`,
+            },
+            method: "PATCH",
+            body: JSON.stringify({ password: newPass }),
+          });
+        }
+      })
+      .catch((error) => console.error("Error fetching data:", error));
+  }, []);
+
+  const enableCancelButton = (index) => {
+    setCancelButtonEnabled((prevValues) => {
+      const newValues = [...prevValues];
+      newValues[index] = true;
+      return newValues;
+    });
+  };
+
+  const disableCancelButton = (index) => {
+    setCancelButtonEnabled((prevValues) => {
+      const newValues = [...prevValues];
+      newValues[index] = false;
+      return newValues;
+    });
+  };
 
   const cancelNumber = async (index, form, values) => {
     try {
@@ -26,6 +84,11 @@ const BuyNumber = () => {
         ? await axios.get("http://localhost:5001/api/cancelNumber", {
             params: {
               id: values?.activationId[index],
+              phoneNumber: values?.number[index],
+            },
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${userToken}`,
             },
           })
         : null;
@@ -43,7 +106,7 @@ const BuyNumber = () => {
         // Reset the timer value
         setTimerValues((prevValues) => {
           const newValues = [...prevValues];
-          newValues[index] = 60;
+          newValues[index] = 0; // Set the timer value to 0
           return newValues;
         });
 
@@ -59,16 +122,38 @@ const BuyNumber = () => {
           pauseOnHover: true,
           draggable: true,
         });
-        console.error("Error canceling number:", cancelResponse.data);
+        // console.error("Error canceling number:", cancelResponse.data);
       }
     } catch (error) {
-      console.error("Error calling cancelNumber API:", error.message);
+      // console.error("Error calling cancelNumber API:", error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const startTimer = async (index, form, values, activationNum) => {
+  const enableResendButton = (index) => {
+    setResendButtonEnabled((prevValues) => {
+      const newValues = [...prevValues];
+      newValues[index] = true;
+      return newValues;
+    });
+  };
+
+  const disableResendButton = (index) => {
+    setResendButtonEnabled((prevValues) => {
+      const newValues = [...prevValues];
+      newValues[index] = false;
+      return newValues;
+    });
+  };
+
+  const startTimer = async (
+    index,
+    form,
+    values,
+    activationNum,
+    numberSequence
+  ) => {
     timersRef.current[index] = setInterval(async () => {
       try {
         const otpResponse = await axios.get(
@@ -76,6 +161,7 @@ const BuyNumber = () => {
           {
             params: {
               id: activationNum,
+              phoneNumber: numberSequence,
             },
           }
         );
@@ -91,9 +177,9 @@ const BuyNumber = () => {
           });
           form.change(`otp[${index}]`, otpResponse.data);
         } else if (otpResponse.data.includes("STATUS_OK")) {
+          enableResendButton(index);
           // Continue waiting
           const activationNum = otpResponse.data.split(":")[1];
-          console.log(activationNum, "num");
           form.change(`otp[${index}]`, activationNum); // Set the OTP field with activationNum
           clearInterval(timersRef.current[index]);
         } else {
@@ -108,24 +194,37 @@ const BuyNumber = () => {
             clearInterval(timersRef.current[index]);
             newValues[index] = 0;
             cancelNumber(index, form, values);
+            disableResendButton(index);
+          } else if (newValues[index] === 60) {
+            enableResendButton(index);
           }
 
           return newValues;
         });
       } catch (error) {
-        console.error("Error calling getOtp API:", error.message);
+        // console.error("Error calling getOtp API:", error.message);
         clearInterval(timersRef.current[index]);
       }
-    }, 1500);
+    }, 1000);
+  };
+
+  const cancelNumberAfterDelay = (index, form, values) => {
+    setTimeout(() => {  
+      cancelNumber(index, form, values);
+      disableResendButton(index);
+    }, 1000);
   };
 
   const callApi = async (index, form, values) => {
     try {
       setLoading(true);
+      disableCancelButton(index);
 
-      const response = await axios.get("http://localhost:5001/api/getNumber");
-      const numberSequence = response.data.split(":").pop().substring(2);
-      const activationNum = response.data.split(":")[1];
+      const response = await axios.get("http://localhost:5001/api/getNumber", {
+        headers: { Authorization: `Bearer ${userToken}` },
+      });
+      const numberSequence = response.data?.data.split(":").pop().substring(2);
+      const activationNum = response.data?.data.split(":")[1];
 
       // Update the form values
       form.change(`number[${index}]`, numberSequence);
@@ -139,9 +238,15 @@ const BuyNumber = () => {
       });
 
       // Start the timer when calling getNumber
-      startTimer(index, form, values, activationNum);
+      startTimer(index, form, values, activationNum, numberSequence);
+      
+      // Enable the Cancel button after 60 seconds
+      setTimeout(() => {
+        enableCancelButton(index);
+        cancelNumberAfterDelay(index, form, values);
+      }, 60000);
     } catch (error) {
-      console.error("Error calling API:", error.message);
+      // console.error("Error calling API:", error.message);
     } finally {
       setLoading(false);
     }
@@ -169,8 +274,30 @@ const BuyNumber = () => {
     }
   };
 
+  function calculateTotalAmount(data) {
+    if (data && Array.isArray(data)) {
+      const totalAmount = data.reduce((sum, item) => sum + item.amount, 0);
+      return totalAmount;
+    } else {
+      console.error("Invalid data format");
+      return null;
+    }
+  }
+
   return (
     <div className="form-list-container">
+      <div className="welcome-text">Welcome {apiData?.user?.name}</div>
+      <div className="logout-btn">
+        <Button
+          onClick={() => {
+            localStorage.removeItem('user')
+            navigate('/')
+          }}
+          style={{ background: "#306DCE", color: "#fff" }}
+        >
+          <LogoutOutlined /> Logout
+        </Button>
+      </div>
       <div className="back-btn">
         <Button
           onClick={() => navigate(-1)}
@@ -184,16 +311,28 @@ const BuyNumber = () => {
         render={({ handleSubmit, form, values }) => (
           <form onSubmit={handleSubmit}>
             <div className="button-and-balance">
-              <div>Points - 50</div>
+              <div>
+                {apiData?.user?.money && (
+                  <div>
+                    <span className="bold-text">Points :</span>{" "}
+                    {apiData?.user?.money?.inAccount}
+                  </div>
+                )}
+                <div>
+                  <span className="bold-text">In Hold:</span>{" "}
+                  {apiData?.user?.money?.inAccount -
+                    calculateTotalAmount(apiData?.user?.money?.inHold)}
+                </div>
+              </div>
               <Button
                 onClick={() => navigate("/audit")}
                 style={{ background: "#306DCE" }}
                 type="primary"
               >
-                Audit
+                OTP History
               </Button>
             </div>
-            <h1>Generate OTP for betvet (₹ 7 )</h1>
+            <h1>Generate OTP for IRCTC (₹ 0 )</h1>
             {[0, 1, 2, 3, 4].map((index) => (
               <div key={index} className="row">
                 <Field name={`loading[${index}]`} initialValue={false}>
@@ -208,12 +347,15 @@ const BuyNumber = () => {
                       </Button>
                       <Button
                         onClick={() => cancelNumber(index, form, values)}
-                        disabled={input.value}
+                        disabled={!cancelButtonEnabled[index]}
                         loading={input.value}
                       >
                         Cancel
                       </Button>
-                      <Button disabled={true} loading={input.value}>
+                      <Button
+                        disabled={!resendButtonEnabled[index]} // Use state to enable/disable Resend OTP button
+                        loading={input.value}
+                      >
                         Resend OTP
                       </Button>
                     </>

@@ -5,6 +5,27 @@
   flex-direction: column;
   height: 100%;
 
+  .logout-btn {
+    background: rgb(48, 109, 206);
+    position: absolute;
+    top: 10px;
+    color: #fff;
+    right: 50px;
+  }
+
+  .bold-text {
+    font-weight: 600;
+    
+  }
+
+  .welcome-text {
+    position: absolute;
+    top: 50px;
+    left: 90px;
+    font-weight: 600;
+    font-size: 26px;
+  }
+
   .back-btn {
     .ant-btn {
       color: rgb(255, 255, 255);

@@ -1,31 +1,30 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button } from 'antd'
 import { LogoutOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 
-const CreateUser = () => {
+const RechargeUser = () => {
   const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
+  const [amount, setAmount] = useState("");
   const isAdmin = localStorage.getItem("admin");
-  const navigate = useNavigate();
+  const navigate = useNavigate()
 
   const API_URL = "http://localhost:5001";
 
   const handleSubmit = async (e) => {
+    // navigate("/listing");
     e.preventDefault();
 
     try {
-      const response = await fetch(API_URL + "/admin/createUser", {
+      const response = await fetch(API_URL + "/admin/rechargeUser", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${isAdmin}`,
+            "Authorization": `Bearer ${isAdmin}`
         },
         body: JSON.stringify({
-          name: name,
           email: username,
-          password: password,
+          amount: amount,
         }),
       });
 
@@ -55,16 +54,9 @@ const CreateUser = () => {
         </Button>
       </div>
       <div className="login-form">
-        <h2>Create User</h2>
+        <h2>Recharge User</h2>
         <form onSubmit={handleSubmit}>
-          <label>
-            Name
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </label>
+          
           <label>
             Email
             <input
@@ -74,21 +66,18 @@ const CreateUser = () => {
             />
           </label>
           <label>
-            Password
+            Amount
             <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
             />
           </label>
           <button type="submit">Submit</button>
         </form>
       </div>
-      <div onClick={() => navigate("/recharge")} className="admin-text">
-        Want to recharge a User ?
-      </div>
     </div>
   );
 };
 
-export default CreateUser;
+export default RechargeUser;

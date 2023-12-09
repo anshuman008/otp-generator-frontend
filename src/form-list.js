@@ -2,10 +2,22 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./form-list.scss";
 import { Spin } from "antd";
+import { Navigate } from 'react-router-dom';
+import { ReloadOutlined } from "@ant-design/icons";
+const API_URL = "http://localhost:5001";
 
 const FormList = () => {
   const [adminBool, setAdminBool] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const isUser = localStorage.getItem("user");
+  const isAdmin = localStorage.getItem("admin");
+
+  if(isUser) {
+    return <Navigate to="/listing" />;
+  }
+
+  if(isAdmin) {
+    return <Navigate to="/createUser" />;
+  }
 
   return (
     <div className="form-container">
@@ -22,10 +34,20 @@ const UserLogin = () => {
   const [otp, setOtp] = useState("");
   const [captcha, setCaptcha] = useState("");
   const [captchaImage, setCaptchaImage] = useState("");
+  const navigate = useNavigate();
+  const [errors, setErrors] = useState({});
+  const[verified, setVerified] = useState(false);
+
 
   useEffect(() => {
     fetchCaptchaImage();
   }, []);
+
+  const validateEmail = (value) => {
+    // Use a simple regex to check for a valid email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(value);
+  };
 
   const fetchCaptchaImage = async () => {
     try {
@@ -38,11 +60,20 @@ const UserLogin = () => {
     }
   };
 
-  const navigate = useNavigate();
+  const reloadCaptcha = () => {
+    fetchCaptchaImage();
+    setCaptcha(""); // Clear the existing captcha value when reloading
+  };
 
   const handleSubmit = async (e) => {
-    navigate("/listing");
     e.preventDefault();
+
+    if (!validateEmail(phoneNumber)) {
+      setErrors({ ...errors, phoneNumber: "Invalid email format" });
+      return;
+    } else {
+      setErrors({ ...errors, phoneNumber: "" });
+    }
 
     try {
       console.log(captcha, "captcha");
@@ -60,6 +91,31 @@ const UserLogin = () => {
 
       if (data.success) {
         console.log("Captcha verification successful");
+
+        try {
+          const response = await fetch(API_URL + "/user/login", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              email: phoneNumber,
+              password: otp,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (data.token) {
+            localStorage.setItem("user", data?.token);
+            navigate('/listing');
+            console.log("Login successful");
+          } else {
+            console.error("Login failed");
+          }
+        } catch (error) {
+          console.error("Login:", error.message);
+        }
       } else {
         console.error("Captcha verification failed");
       }
@@ -79,6 +135,7 @@ const UserLogin = () => {
             value={phoneNumber}
             onChange={(e) => setPhoneNumber(e.target.value)}
           />
+           {errors.phoneNumber && <div className="error-message">{errors.phoneNumber}</div>}
         </label>
         <label>
           Password
@@ -87,21 +144,29 @@ const UserLogin = () => {
             value={otp}
             onChange={(e) => setOtp(e.target.value)}
           />
+          {console.log(errors, 'er')}
+          {errors.otp && <div className="error-message">{errors.otp}</div>}
         </label>
         <div className="captcha">
-        {captchaImage ? (
-          <img src={captchaImage} alt="Captcha" />
-        ) : (
-          <Spin className="spin-style" />
-        )}
+          {captchaImage ? (
+            <img src={captchaImage} alt="Captcha" />
+          ) : (
+            <Spin className="spin-style" />
+          )}
 
-        <input
-          type="text"
-          value={captcha}
-          onChange={(e) => setCaptcha(e.target.value)}
-          placeholder="Enter Captcha"
-        />
-      </div>
+          <input
+            type="text"
+            value={captcha}
+            onChange={(e) => setCaptcha(e.target.value)}
+            placeholder="Enter Captcha"
+          />
+          <div className="reload-captcha">
+            <button type="button" onClick={reloadCaptcha}>
+              <ReloadOutlined />
+            </button>
+          </div>
+        </div>
+        {/* <div className="error-message">{!verified && `Captcha didn't match!`}</div> */}
         <button type="submit">Submit</button>
       </form>
     </div>
@@ -135,8 +200,8 @@ const AdminLogin = () => {
 
       if (data.token) {
         localStorage.setItem("admin", data?.token);
-        if(data?.hasOwnProperty("admin")) {
-          navigate('/createUser')
+        if (data?.hasOwnProperty("admin")) {
+          navigate("/createUser");
         }
         // window.location.reload()
         console.log("Captcha verification successful");

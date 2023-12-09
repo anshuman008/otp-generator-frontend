@@ -13,6 +13,13 @@
     cursor: pointer;
   }
 }
+.logout-btn {
+  background: rgb(48, 109, 206);
+  position: absolute;
+  top: 10px;
+  color: #fff;
+  right: 50px;
+}
 .login-form {
   width: 310px;
   // margin: auto;
@@ -20,6 +27,10 @@
   border: 1px solid #ccc;
   border-radius: 5px;
   box-shadow: 0 0 16px 0px rgb(178 176 176 / 50%);
+
+  .error-message {
+    color: red;
+  }
 
   .ant-btn,
   .ant-btn:hover,
@@ -87,6 +98,21 @@
 
   .captcha {
     margin-top: 15px;
+    position: relative;
+
+    .reload-captcha {
+      position: absolute;
+      width: 28px;
+      height: 24px;
+      right: 3px;
+        top: -6px;
+
+      button {
+        width: 100%;
+        padding: 0;
+      height: 100%;
+      }
+    }
 
     img {
       width: 100%;
