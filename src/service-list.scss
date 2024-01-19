@@ -1,0 +1,148 @@
+.service-card {
+  position: relative;
+  background: #fff;
+  padding: 30px 40px;
+  border-radius: 30px;
+  width: 50%;
+  height: calc(100% - 240px);
+  overflow: auto;
+
+  .ant-input {
+    padding: 7px 11px;
+  }
+
+  label {
+    font-size: 14px;
+    color: #626262;
+    margin-bottom: 10px;
+    font-weight: 500;
+  }
+
+  .countries-list {
+    height: calc(100% - 90px);
+    overflow: auto;
+  }
+
+  .filter-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    font-weight: 600;
+    opacity: 0.6;
+    margin-bottom: 16px;
+
+    .country-filter,
+    .qty-filter,
+    .price-filter {
+      display: flex;
+      align-items: end;
+      gap: 7px;
+      cursor: pointer;
+    }
+
+    img {
+      width: 11px;
+    }
+  }
+  .last-three {
+    display: flex;
+    gap: 20px;
+  }
+  .btn-gap {
+    width: 104px;
+  }
+
+  .service-countries {
+    display: flex;
+    justify-content: space-between;
+    border-radius: 9px;
+    margin-bottom: 22px;
+    padding: 8px 12px;
+    border: 1px solid #ededed;
+
+    .country-flag {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+
+      .country-name {
+        font-weight: 500;
+      }
+
+      img {
+        width: 40px;
+        border-radius: 5px;
+      }
+    }
+    .right-contents {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      font-size: 13px;
+
+      .quantity {
+        opacity: 0.6;
+        font-weight: 500;
+      }
+      .price {
+        opacity: 0.6;
+        font-weight: 500;
+      }
+
+      .ant-btn {
+        background-image: linear-gradient(
+          310deg,
+          rgb(20, 23, 39),
+          rgb(58, 65, 111)
+        );
+        color: #fff;
+        border-radius: 4px;
+        font-weight: 500;
+        width: 100px;
+        height: 37px;
+        margin-left: 11px;
+      }
+      .ant-btn:hover {
+        background-image: linear-gradient(
+          310deg,
+          rgb(20, 23, 39),
+          rgb(58, 65, 111)
+        );
+      }
+    }
+  }
+
+  .services-list {
+    background: #fff;
+    border-radius: 30px;
+  }
+}
+.service-field {
+}
+.ant-select-selection-item {
+  display: flex;
+  cursor: pointer;
+  gap: 10px;
+  img {
+    width: 33px;
+  }
+}
+.ant-select {
+  .ant-select-arrow {
+    top: 67%;
+  }
+}
+.ant-select-selector {
+  height: 41px !important;
+  margin-top: 4px !important;
+}
+.ant-select-item-option-content {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  img {
+    width: 33px;
+  }
+}

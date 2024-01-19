@@ -8,13 +8,24 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./buyNumber.scss";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { numberApi } from "./api";
 
 const BuyNumber = () => {
   const [loading, setLoading] = useState(false);
-  const [timerValues, setTimerValues] = useState([60, 60, 60, 60, 60]);
+  const [mainTimer, setMainTimer] = useState(null);
+  const [resendTimer, setResendTimer] = useState(null);
+  const [timerValues, setTimerValues] = useState([300, 60, 60, 60, 60]);
   const timersRef = useRef([]);
   const navigate = useNavigate();
+  const location = useLocation();
+  const [statusOKFlags, setStatusOKFlags] = useState([
+    false,
+    false,
+    false,
+    false,
+    false,
+  ]);
   const [apiData, setApiData] = useState([]);
   const userToken = localStorage.getItem("user");
   const [resendButtonEnabled, setResendButtonEnabled] = useState([
@@ -34,8 +45,9 @@ const BuyNumber = () => {
 
   useEffect(() => {
     // Make your initial API call here
-    fetch("https://nodejsclusters-157156-0.cloudclusters.net/user/me", {
-      headers: { Authorization: `Bearer ${userToken}` },
+    const { country, countryName, amount, service } = location?.state;
+    fetch(numberApi.me, {
+      headers: { Authorization: `Bearer ${userToken}` }
     })
       .then((response) => response.json())
       .then((data) => {
@@ -45,7 +57,7 @@ const BuyNumber = () => {
           while (!newPass) {
             newPass = prompt("Enter your new password");
           }
-          fetch("https://nodejsclusters-157156-0.cloudclusters.net/user/me", {
+          fetch(numberApi.me, {
             headers: {
               "Content-Type": "application/json",
               Authorization: `Bearer ${userToken}`,
@@ -79,9 +91,11 @@ const BuyNumber = () => {
       setLoading(true);
 
       clearInterval(timersRef.current[index]);
+      clearInterval(resendTimer);
+      clearInterval(mainTimer);
 
       const cancelResponse = values?.activationId[index]
-        ? await axios.get("https://nodejsclusters-157156-0.cloudclusters.net/api/cancelNumber", {
+        ? await axios.get(numberApi.cancelNumber, {
             params: {
               id: values?.activationId[index],
               phoneNumber: values?.number[index],
@@ -122,10 +136,67 @@ const BuyNumber = () => {
           pauseOnHover: true,
           draggable: true,
         });
-        // console.error("Error canceling number:", cancelResponse.data);
       }
     } catch (error) {
-      // console.error("Error calling cancelNumber API:", error.message);
+      console.error("Error calling cancelNumber API:", error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const resendOtp = async (index, form, values) => {
+    try {
+      setLoading(true);
+
+      clearInterval(timersRef.current[index]);
+      clearInterval(resendTimer);
+      clearInterval(mainTimer);
+
+      const cancelResponse = values?.activationId[index]
+        ? await axios.get(numberApi.resendOtp, {
+            params: {
+              id: values?.activationId[index],
+              phoneNumber: values?.number[index],
+            },
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${userToken}`,
+            },
+          })
+        : null;
+
+      if (cancelResponse.data === "ACCESS_CANCEL") {
+        toast.success(cancelResponse.data, {
+          position: "top-right",
+          autoClose: 2000,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+
+        // Reset the timer value
+        setTimerValues((prevValues) => {
+          const newValues = [...prevValues];
+          newValues[index] = 0; // Set the timer value to 0
+          return newValues;
+        });
+
+        form.change(`loading[${index}]`, false);
+        form.change(`number[${index}]`, "");
+        form.change(`otp[${index}]`, "");
+      } else {
+        toast.error(cancelResponse.data, {
+          position: "top-right",
+          autoClose: 2000,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+      }
+    } catch (error) {
+      console.error("Error calling cancelNumber API:", error.message);
     } finally {
       setLoading(false);
     }
@@ -147,24 +218,30 @@ const BuyNumber = () => {
     });
   };
 
-  const startTimer = async (
+  const startTimers = async (
     index,
     form,
     values,
     activationNum,
     numberSequence
   ) => {
+    setMainTimer(
+      setInterval(() => {
+        // Main timer logic
+        // Once it stops, cancelNumber API should be called
+        clearInterval(mainTimer);
+        cancelNumber(index, form, values);
+      }, timerValues[0] * 1000)
+    );
+
     timersRef.current[index] = setInterval(async () => {
       try {
-        const otpResponse = await axios.get(
-          "https://nodejsclusters-157156-0.cloudclusters.net/api/getOtp",
-          {
-            params: {
-              id: activationNum,
-              phoneNumber: numberSequence,
-            },
-          }
-        );
+        const otpResponse = await axios.get(numberApi.getOtp, {
+          params: {
+            id: activationNum,
+            phoneNumber: numberSequence,
+          },
+        });
 
         if (otpResponse.data === "SMS_RECEIVED") {
           toast.success("OTP Received", {
@@ -178,9 +255,13 @@ const BuyNumber = () => {
           form.change(`otp[${index}]`, otpResponse.data);
         } else if (otpResponse.data.includes("STATUS_OK")) {
           enableResendButton(index);
-          // Continue waiting
+          setStatusOKFlags((prevFlags) => {
+            const newFlags = [...prevFlags];
+            newFlags[index] = true;
+            return newFlags;
+          }); // Set the flag to true
           const activationNum = otpResponse.data.split(":")[1];
-          form.change(`otp[${index}]`, activationNum); // Set the OTP field with activationNum
+          form.change(`otp[${index}]`, activationNum);
           clearInterval(timersRef.current[index]);
         } else {
           // Handle other response cases if needed
@@ -193,8 +274,17 @@ const BuyNumber = () => {
           if (newValues[index] <= 0) {
             clearInterval(timersRef.current[index]);
             newValues[index] = 0;
-            cancelNumber(index, form, values);
-            disableResendButton(index);
+            if (!statusOKFlags[index]) {
+              // If STATUS_OK is not received, disable Resend and enable Cancel after 1 minute
+              disableResendButton(index);
+              enableCancelButton(index);
+              cancelNumberAfterDelay(index, form, values);
+              setStatusOKFlags((prevFlags) => {
+                const newFlags = [...prevFlags];
+                newFlags[index] = false; // Reset the flag
+                return newFlags;
+              });
+            }
           } else if (newValues[index] === 60) {
             enableResendButton(index);
           }
@@ -202,14 +292,14 @@ const BuyNumber = () => {
           return newValues;
         });
       } catch (error) {
-        // console.error("Error calling getOtp API:", error.message);
+        console.error("Error calling getOtp API:", error.message);
         clearInterval(timersRef.current[index]);
       }
     }, 1000);
   };
 
   const cancelNumberAfterDelay = (index, form, values) => {
-    setTimeout(() => {  
+    setTimeout(() => {
       cancelNumber(index, form, values);
       disableResendButton(index);
     }, 1000);
@@ -219,10 +309,22 @@ const BuyNumber = () => {
     try {
       setLoading(true);
       disableCancelButton(index);
-
-      const response = await axios.get("https://nodejsclusters-157156-0.cloudclusters.net/api/getNumber", {
-        headers: { Authorization: `Bearer ${userToken}` },
-      });
+      const { amount, service, country, countryName } = location?.state;
+      const response = await axios.post(
+        numberApi.getNumber,
+        {
+          amount: amount,
+          service: service,
+          country: country,
+          countryName: countryName
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+          },
+        }
+      );
+      
       const numberSequence = response.data?.data.split(":").pop().substring(2);
       const activationNum = response.data?.data.split(":")[1];
 
@@ -233,20 +335,14 @@ const BuyNumber = () => {
       // Reset the timer value when calling getNumber
       setTimerValues((prevValues) => {
         const newValues = [...prevValues];
-        newValues[index] = 60;
+        newValues[index] = 300; // Set the main timer value to 5 minutes
         return newValues;
       });
 
-      // Start the timer when calling getNumber
-      startTimer(index, form, values, activationNum, numberSequence);
-      
-      // Enable the Cancel button after 60 seconds
-      setTimeout(() => {
-        enableCancelButton(index);
-        cancelNumberAfterDelay(index, form, values);
-      }, 60000);
+      // Start both main timer and resend timer
+      startTimers(index, form, values, activationNum, numberSequence);
     } catch (error) {
-      // console.error("Error calling API:", error.message);
+      console.error("Error calling API:", error.message);
     } finally {
       setLoading(false);
     }
@@ -286,23 +382,18 @@ const BuyNumber = () => {
 
   return (
     <div className="form-list-container">
-      <div className="welcome-text">Welcome {apiData?.user?.name}</div>
       <div className="logout-btn">
         <Button
           onClick={() => {
-            localStorage.removeItem('user')
-            navigate('/')
+            localStorage.removeItem("user");
+            navigate("/");
           }}
-          style={{ background: "#306DCE", color: "#fff" }}
         >
           <LogoutOutlined /> Logout
         </Button>
       </div>
       <div className="back-btn">
-        <Button
-          onClick={() => navigate(-1)}
-          style={{ background: "#306DCE", color: "#fff" }}
-        >
+        <Button onClick={() => navigate(-1)}>
           <ArrowLeftOutlined /> Back
         </Button>
       </div>
@@ -310,23 +401,22 @@ const BuyNumber = () => {
         onSubmit={() => {}}
         render={({ handleSubmit, form, values }) => (
           <form onSubmit={handleSubmit}>
+            <div className="welcome-text">Welcome {apiData?.user?.name} !</div>
             <div className="button-and-balance">
               <div>
                 {apiData?.user?.money && (
-                  <div>
+                  <div className="points-and-text">
                     <span className="bold-text">Points :</span>{" "}
                     {apiData?.user?.money?.inAccount}
                   </div>
                 )}
-                <div>
+                <div className="points-and-text">
                   <span className="bold-text">In Hold:</span>{" "}
-                  {apiData?.user?.money?.inAccount -
-                    calculateTotalAmount(apiData?.user?.money?.inHold)}
+                  {calculateTotalAmount(apiData?.user?.money?.inHold)}
                 </div>
               </div>
               <Button
                 onClick={() => navigate("/audit")}
-                style={{ background: "#306DCE" }}
                 type="primary"
               >
                 OTP History
@@ -347,12 +437,13 @@ const BuyNumber = () => {
                       </Button>
                       <Button
                         onClick={() => cancelNumber(index, form, values)}
-                        disabled={!cancelButtonEnabled[index]}
+                        // disabled={!cancelButtonEnabled[index]}
                         loading={input.value}
                       >
                         Cancel
                       </Button>
                       <Button
+                        onClick={() => resendOtp(index, form, values)}
                         disabled={!resendButtonEnabled[index]} // Use state to enable/disable Resend OTP button
                         loading={input.value}
                       >

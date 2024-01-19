@@ -22,7 +22,7 @@ const AuditTable = () => {
 
   useEffect(() => {
     // Make your initial API call here
-    fetch("https://nodejsclusters-157156-0.cloudclusters.net/user/me/logs", {
+    fetch("http://localhost:5001/user/me/logs", {
       headers: { Authorization: `Bearer ${isUser}` },
     })
       .then((response) => response.json())
@@ -38,8 +38,8 @@ const AuditTable = () => {
     },
     {
       title: "Service",
-      dataIndex: "optGenerratedFor",
-      key: "optGenerratedFor",
+      dataIndex: "otpGenerratedFor",
+      key: "otpGenerratedFor",
     },
     {
       title: "Price",
@@ -78,17 +78,18 @@ const AuditTable = () => {
       title: "OTP",
       dataIndex: "otp",
       key: "otp",
+      width: '130px'
     },
-    {
-      title: "Left",
-      key: "left",
-      render: () => "",
-    },
-    {
-      title: "Action",
-      key: "action",
-      render: () => "",
-    },
+    // {
+    //   title: "Left",
+    //   key: "left",
+    //   render: () => "",
+    // },
+    // {
+    //   title: "Action",
+    //   key: "action",
+    //   render: () => "",
+    // },
   ];
 
   return (
@@ -96,7 +97,6 @@ const AuditTable = () => {
       <div className="back-btn">
         <Button
           onClick={() => navigate(-1)}
-          style={{ background: "#306DCE", color: "#fff" }}
         >
           <ArrowLeftOutlined /> Back
         </Button>

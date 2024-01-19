@@ -5,10 +5,12 @@ import AuditTable from "./audit-table";
 import "./form-list.scss";
 import CreateUser from "./create-user";
 import RechargeUser from "./recharge-user";
+import ServiceList from "./service-list";
+import AdminDashboard from "./admin-dashboard";
+import PageTransition from "./page-transition";
 
 const ProtectedRoute = ({ children }) => {
   const isAdmin = localStorage.getItem("admin");
-  const isUser = localStorage.getItem("user");
 
   if (!isAdmin) {
     return <Navigate to="/" />;
@@ -35,7 +37,6 @@ const UserProtected = ({ children }) => {
 const App = () => {
   return (
     <div style={{ height: "100%" }}>
-      {/* <MenuBar /> */}
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<FormList />} />
@@ -43,7 +44,19 @@ const App = () => {
             path="/listing"
             element={
               <UserProtected>
-                <BuyNumber />
+                <PageTransition>
+                  <BuyNumber />
+                </PageTransition>
+              </UserProtected>
+            }
+          />
+          <Route
+            path="/service-list"
+            element={
+              <UserProtected>
+                <PageTransition>
+                  <ServiceList />
+                </PageTransition>
               </UserProtected>
             }
           />
@@ -51,7 +64,9 @@ const App = () => {
             path="/audit"
             element={
               <UserProtected>
-                <AuditTable />
+                <PageTransition>
+                  <AuditTable />
+                </PageTransition>
               </UserProtected>
             }
           />
@@ -61,7 +76,17 @@ const App = () => {
             path="/createUser"
             element={
               <ProtectedRoute>
-                <CreateUser />
+                <PageTransition>
+                  <CreateUser />
+                </PageTransition>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin-dashboard"
+            element={
+              <ProtectedRoute>
+                <AdminDashboard />
               </ProtectedRoute>
             }
           />

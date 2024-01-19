@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Button } from 'antd'
 import { LogoutOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { ArrowLeftOutlined } from '@ant-design/icons';
 
 const RechargeUser = () => {
   const [username, setUsername] = useState("");
@@ -9,7 +10,7 @@ const RechargeUser = () => {
   const isAdmin = localStorage.getItem("admin");
   const navigate = useNavigate()
 
-  const API_URL = "https://nodejsclusters-157156-0.cloudclusters.net";
+  const API_URL = "https://wkrgd7c509.execute-api.ap-south-1.amazonaws.com";
 
   const handleSubmit = async (e) => {
     // navigate("/listing");
@@ -42,13 +43,16 @@ const RechargeUser = () => {
 
   return (
     <div className="form-container">
+       <div onClick={() => navigate(-1)} className="back-btn">
+        <ArrowLeftOutlined />
+        <div>Back</div>
+      </div>
        <div className="logout-btn">
         <Button
           onClick={() => {
             localStorage.removeItem('admin')
             navigate('/')
           }}
-          style={{ background: "#306DCE", color: "#fff" }}
         >
           <LogoutOutlined /> Logout
         </Button>
