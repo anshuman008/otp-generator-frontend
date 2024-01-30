@@ -1,12 +1,11 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./form-list.scss";
-import { Spin } from "antd";
+import { message } from "antd";
 import ReCAPTCHA from "react-google-recaptcha";
 
 import { Navigate } from "react-router-dom";
 import { userApi, adminApi } from "./api";
-import { ArrowLeftOutlined } from '@ant-design/icons';
 
 const FormList = () => {
   const [adminBool, setAdminBool] = useState(false);
@@ -81,7 +80,14 @@ const UserLogin = ({ api }) => {
           } else {
             console.error("Login failed");
           }
+          if(response.status !== 200) {
+            message.error('Invalid Credentials!')
+          }
+          if(response.status === 200) {
+            message.success('Login Successful!')
+          }
         } catch (error) {
+          console.log('in')
           console.error("Login:", error.message);
         }
       } else {
@@ -114,7 +120,6 @@ const UserLogin = ({ api }) => {
             value={otp}
             onChange={(e) => setOtp(e.target.value)}
           />
-          {console.log(errors, "er")}
           {errors.otp && <div className="error-message">{errors.otp}</div>}
         </label>
         <div className="captcha">

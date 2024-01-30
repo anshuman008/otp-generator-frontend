@@ -140,6 +140,8 @@
       margin-bottom: 50px;
       font-size: 29px;
       font-weight: 500;
+      text-align: left;
+      width: 100%;
     }
 
     input:hover,
@@ -182,5 +184,33 @@
       border: none;
       top: 0;
     }
+  }
+}
+.no-money-modal {
+  .ant-modal-close {
+    top: 37px;
+    right: 30px;
+  }
+  .ant-modal-title {
+    text-align: center;
+    font-size: 25px;
+  }
+  .ant-modal-content {
+    padding: 33px 28px;
+  }
+  .image-div {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px 0;
+
+    img {
+      width: 70%;
+    }
+  }
+  .no-money-message {
+    text-align: center;
+    font-weight: 500;
+    opacity: 0.6;
   }
 }

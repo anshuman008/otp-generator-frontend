@@ -4,6 +4,10 @@
   background: linear-gradient(310deg, rgb(33, 82, 255), rgb(33, 212, 253));
   display: flex;
   justify-content: center;
+  .ant-select:not(.ant-select-customize-input) .ant-select-selector {
+    height: 100% !important;
+    margin: 0 !important;
+  }
   .ant-pagination .ant-pagination-item:not(.ant-pagination-item-active):hover {
     border-radius: 50%;
     border: 1px solid transparent;

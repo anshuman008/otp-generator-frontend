@@ -10,7 +10,7 @@ const RechargeUser = () => {
   const isAdmin = localStorage.getItem("admin");
   const navigate = useNavigate()
 
-  const API_URL = "https://wkrgd7c509.execute-api.ap-south-1.amazonaws.com";
+  const API_URL = "http://localhost:5001";
 
   const handleSubmit = async (e) => {
     // navigate("/listing");

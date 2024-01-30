@@ -1,40 +1,24 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Form, Field } from "react-final-form";
+import { Field } from "react-final-form";
 import { Input, Button } from "antd";
-import { ArrowLeftOutlined, LogoutOutlined } from "@ant-design/icons";
 import { CopyOutlined } from "@ant-design/icons";
 import { CopyToClipboard } from "react-copy-to-clipboard";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import "./buyNumber.scss";
-import axios from "axios";
+import io from "socket.io-client";
 import { useNavigate, useLocation } from "react-router-dom";
 import { numberApi } from "./api";
+import NoMoneyModal from "./no-money-modal";
 
-const BuyNumber = () => {
+const BuyNumber = ({ values, form }) => {
   const [loading, setLoading] = useState(false);
-  const [mainTimer, setMainTimer] = useState(null);
-  const [resendTimer, setResendTimer] = useState(null);
   const [timerValues, setTimerValues] = useState([300, 60, 60, 60, 60]);
-  const timersRef = useRef([]);
   const navigate = useNavigate();
   const location = useLocation();
-  const [statusOKFlags, setStatusOKFlags] = useState([
-    false,
-    false,
-    false,
-    false,
-    false,
-  ]);
+  const [moneyModal, setMoneyModal] = useState(false);
   const [apiData, setApiData] = useState([]);
   const userToken = localStorage.getItem("user");
-  const [resendButtonEnabled, setResendButtonEnabled] = useState([
-    false,
-    false,
-    false,
-    false,
-    false,
-  ]);
   const [cancelButtonEnabled, setCancelButtonEnabled] = useState([
     false,
     false,
@@ -43,11 +27,32 @@ const BuyNumber = () => {
     false,
   ]);
 
+  const socket = io("http://localhost:5001", {
+    auth: {
+      token: userToken,
+    },
+    cors: {
+      origin: "http://localhost:5001",
+      methods: ["GET", "POST"],
+    },
+  });
+
   useEffect(() => {
-    // Make your initial API call here
-    const { country, countryName, amount, service } = location?.state;
+    console.log("Form Object:", form);
+  }, [form]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (event) => {
+      event.preventDefault();
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, []);
+  useEffect(() => {
     fetch(numberApi.me, {
-      headers: { Authorization: `Bearer ${userToken}` }
+      headers: { Authorization: `Bearer ${userToken}` },
     })
       .then((response) => response.json())
       .then((data) => {
@@ -70,14 +75,6 @@ const BuyNumber = () => {
       .catch((error) => console.error("Error fetching data:", error));
   }, []);
 
-  const enableCancelButton = (index) => {
-    setCancelButtonEnabled((prevValues) => {
-      const newValues = [...prevValues];
-      newValues[index] = true;
-      return newValues;
-    });
-  };
-
   const disableCancelButton = (index) => {
     setCancelButtonEnabled((prevValues) => {
       const newValues = [...prevValues];
@@ -86,165 +83,66 @@ const BuyNumber = () => {
     });
   };
 
+  const moneyInHold =
+    apiData?.user?.money?.inHold
+      ?.map((item) => item.amount)
+      .reduce((total, currentAmount) => total + (currentAmount || 0), 0)
+      .toFixed(2) || 0;
+  const totalPoints = apiData?.user?.money?.inAccount - moneyInHold;
+
+  socket.on("cancelOperation", (response) => {
+    try {
+      console.log("Cancel Number Response:", response);
+      if (response.data) {
+        const fieldIndex = form
+          .getState()
+          .values.number.indexOf(response.number);
+
+        if (fieldIndex !== -1) {
+          form.change(`number[${fieldIndex}]`, "");
+          form.change(`otp[${fieldIndex}]`, "");
+        } else {
+          console.warn(
+            `Cancelled number ${response.number} not found in form.`
+          );
+        }
+
+        toast.success("Number Cancelled Successfully", {
+          position: "top-right",
+          autoClose: 2000,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+      } else if (!response.data) {
+        toast.error("Unexpected Error", {
+          position: "top-right",
+          autoClose: 2000,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+      }
+    } catch (error) {
+      console.error("Error handling server response:", error.message);
+    } finally {
+      setLoading(false);
+    }
+  });
+
   const cancelNumber = async (index, form, values) => {
-    try {
-      setLoading(true);
-
-      clearInterval(timersRef.current[index]);
-      clearInterval(resendTimer);
-      clearInterval(mainTimer);
-
-      const cancelResponse = values?.activationId[index]
-        ? await axios.get(numberApi.cancelNumber, {
-            params: {
-              id: values?.activationId[index],
-              phoneNumber: values?.number[index],
-            },
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${userToken}`,
-            },
-          })
-        : null;
-
-      if (cancelResponse.data === "ACCESS_CANCEL") {
-        toast.success(cancelResponse.data, {
-          position: "top-right",
-          autoClose: 2000,
-          hideProgressBar: true,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
-
-        // Reset the timer value
-        setTimerValues((prevValues) => {
-          const newValues = [...prevValues];
-          newValues[index] = 0; // Set the timer value to 0
-          return newValues;
-        });
-
-        form.change(`loading[${index}]`, false);
-        form.change(`number[${index}]`, "");
-        form.change(`otp[${index}]`, "");
-      } else {
-        toast.error(cancelResponse.data, {
-          position: "top-right",
-          autoClose: 2000,
-          hideProgressBar: true,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
-      }
-    } catch (error) {
-      console.error("Error calling cancelNumber API:", error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const resendOtp = async (index, form, values) => {
-    try {
-      setLoading(true);
-
-      clearInterval(timersRef.current[index]);
-      clearInterval(resendTimer);
-      clearInterval(mainTimer);
-
-      const cancelResponse = values?.activationId[index]
-        ? await axios.get(numberApi.resendOtp, {
-            params: {
-              id: values?.activationId[index],
-              phoneNumber: values?.number[index],
-            },
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${userToken}`,
-            },
-          })
-        : null;
-
-      if (cancelResponse.data === "ACCESS_CANCEL") {
-        toast.success(cancelResponse.data, {
-          position: "top-right",
-          autoClose: 2000,
-          hideProgressBar: true,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
-
-        // Reset the timer value
-        setTimerValues((prevValues) => {
-          const newValues = [...prevValues];
-          newValues[index] = 0; // Set the timer value to 0
-          return newValues;
-        });
-
-        form.change(`loading[${index}]`, false);
-        form.change(`number[${index}]`, "");
-        form.change(`otp[${index}]`, "");
-      } else {
-        toast.error(cancelResponse.data, {
-          position: "top-right",
-          autoClose: 2000,
-          hideProgressBar: true,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        });
-      }
-    } catch (error) {
-      console.error("Error calling cancelNumber API:", error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const enableResendButton = (index) => {
-    setResendButtonEnabled((prevValues) => {
-      const newValues = [...prevValues];
-      newValues[index] = true;
-      return newValues;
+    socket.emit("cancelNumber", {
+      id: values?.activationId[index],
+      phoneNumber: values?.number[index],
     });
-  };
 
-  const disableResendButton = (index) => {
-    setResendButtonEnabled((prevValues) => {
-      const newValues = [...prevValues];
-      newValues[index] = false;
-      return newValues;
-    });
-  };
-
-  const startTimers = async (
-    index,
-    form,
-    values,
-    activationNum,
-    numberSequence
-  ) => {
-    setMainTimer(
-      setInterval(() => {
-        // Main timer logic
-        // Once it stops, cancelNumber API should be called
-        clearInterval(mainTimer);
-        cancelNumber(index, form, values);
-      }, timerValues[0] * 1000)
-    );
-
-    timersRef.current[index] = setInterval(async () => {
+    socket.once("responseC", (response) => {
       try {
-        const otpResponse = await axios.get(numberApi.getOtp, {
-          params: {
-            id: activationNum,
-            phoneNumber: numberSequence,
-          },
-        });
-
-        if (otpResponse.data === "SMS_RECEIVED") {
-          toast.success("OTP Received", {
+        console.log("Cancel Number Response:", response);
+        if (response.data) {
+          toast.success(response.data, {
             position: "top-right",
             autoClose: 2000,
             hideProgressBar: true,
@@ -252,98 +150,121 @@ const BuyNumber = () => {
             pauseOnHover: true,
             draggable: true,
           });
-          form.change(`otp[${index}]`, otpResponse.data);
-        } else if (otpResponse.data.includes("STATUS_OK")) {
-          enableResendButton(index);
-          setStatusOKFlags((prevFlags) => {
-            const newFlags = [...prevFlags];
-            newFlags[index] = true;
-            return newFlags;
-          }); // Set the flag to true
-          const activationNum = otpResponse.data.split(":")[1];
-          form.change(`otp[${index}]`, activationNum);
-          clearInterval(timersRef.current[index]);
-        } else {
-          // Handle other response cases if needed
-        }
 
-        setTimerValues((prevValues) => {
-          const newValues = [...prevValues];
-          newValues[index] = newValues[index] - 1;
-
-          if (newValues[index] <= 0) {
-            clearInterval(timersRef.current[index]);
+          setTimerValues((prevValues) => {
+            const newValues = [...prevValues];
             newValues[index] = 0;
-            if (!statusOKFlags[index]) {
-              // If STATUS_OK is not received, disable Resend and enable Cancel after 1 minute
-              disableResendButton(index);
-              enableCancelButton(index);
-              cancelNumberAfterDelay(index, form, values);
-              setStatusOKFlags((prevFlags) => {
-                const newFlags = [...prevFlags];
-                newFlags[index] = false; // Reset the flag
-                return newFlags;
-              });
-            }
-          } else if (newValues[index] === 60) {
-            enableResendButton(index);
-          }
+            return newValues;
+          });
 
-          return newValues;
-        });
+          form.change(`loading[${index}]`, false);
+          form.change(`number[${index}]`, "");
+          form.change(`otp[${index}]`, "");
+        } else if (response.error) {
+          toast.error(response.error, {
+            position: "top-right",
+            autoClose: 2000,
+            hideProgressBar: true,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          });
+        }
       } catch (error) {
-        console.error("Error calling getOtp API:", error.message);
-        clearInterval(timersRef.current[index]);
+        console.error("Error handling server response:", error.message);
+      } finally {
+        setLoading(false);
       }
-    }, 1000);
+    });
   };
 
-  const cancelNumberAfterDelay = (index, form, values) => {
-    setTimeout(() => {
-      cancelNumber(index, form, values);
-      disableResendButton(index);
-    }, 1000);
+  socket.on("otpResponse", (response) => {
+    try {
+      if (response.data) {
+        const fieldIndex = form
+          .getState()
+          .values.number.indexOf(response.number);
+        form.change(`otp[${fieldIndex}]`, response.data);
+      } else {
+        toast.error(response.msg, {
+          position: "top-right",
+          autoClose: 2000,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
+      }
+    } catch (error) {
+      console.error("Error calling cancelNumber API:", error.message);
+    } finally {
+      setLoading(false);
+    }
+  });
+
+  const resendOtp = async (index, form, values) => {
+    socket.emit("resendOtp", {
+      id: values?.activationId[index],
+      phoneNumber: values?.number[index],
+    });
+    socket.once("resendResponse", (response) => {
+      try {
+        if (response.data) {
+          const fieldIndex = form
+            .getState()
+            .values.number.indexOf(response.number);
+          form.change(`otp[${fieldIndex}]`, response.data);
+        } else {
+          toast.error(response.msg, {
+            position: "top-right",
+            autoClose: 2000,
+            hideProgressBar: true,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+          });
+        }
+      } catch (error) {
+        console.error("Error calling cancelNumber API:", error.message);
+      } finally {
+        setLoading(false);
+      }
+    });
   };
 
-  const callApi = async (index, form, values) => {
+  const callApi = (index, form) => {
+    if (totalPoints <= 1) {
+      setMoneyModal(true);
+    }
     try {
       setLoading(true);
       disableCancelButton(index);
       const { amount, service, country, countryName } = location?.state;
-      const response = await axios.post(
-        numberApi.getNumber,
-        {
-          amount: amount,
-          service: service,
-          country: country,
-          countryName: countryName
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${userToken}`,
-          },
-        }
-      );
-      
-      const numberSequence = response.data?.data.split(":").pop().substring(2);
-      const activationNum = response.data?.data.split(":")[1];
 
-      // Update the form values
-      form.change(`number[${index}]`, numberSequence);
-      form.change(`activationId[${index}]`, activationNum);
-
-      // Reset the timer value when calling getNumber
-      setTimerValues((prevValues) => {
-        const newValues = [...prevValues];
-        newValues[index] = 300; // Set the main timer value to 5 minutes
-        return newValues;
+      socket.emit("getNumber", {
+        amount: amount,
+        service: service,
+        country: country,
+        countryName: countryName,
       });
 
-      // Start both main timer and resend timer
-      startTimers(index, form, values, activationNum, numberSequence);
+      socket.once("responseA", (data) => {
+        try {
+          console.log("Response A:", data);
+
+          const numberSequence = data?.data?.split(":").pop().substring(2);
+          const activationNum = data?.data?.split(":")[1];
+
+          form.change(`number[${index}]`, numberSequence);
+          form.change(`activationId[${index}]`, activationNum);
+        } catch (error) {
+          console.error("Error handling server response:", error.message);
+        } finally {
+          setLoading(false);
+        }
+      });
     } catch (error) {
       console.error("Error calling API:", error.message);
-    } finally {
       setLoading(false);
     }
   };
@@ -370,139 +291,111 @@ const BuyNumber = () => {
     }
   };
 
-  function calculateTotalAmount(data) {
-    if (data && Array.isArray(data)) {
-      const totalAmount = data.reduce((sum, item) => sum + item.amount, 0);
-      return totalAmount;
-    } else {
-      console.error("Invalid data format");
-      return null;
-    }
-  }
-
   return (
-    <div className="form-list-container">
-      <div className="logout-btn">
-        <Button
-          onClick={() => {
-            localStorage.removeItem("user");
-            navigate("/");
-          }}
-        >
-          <LogoutOutlined /> Logout
-        </Button>
-      </div>
-      <div className="back-btn">
-        <Button onClick={() => navigate(-1)}>
-          <ArrowLeftOutlined /> Back
-        </Button>
-      </div>
-      <Form
-        onSubmit={() => {}}
-        render={({ handleSubmit, form, values }) => (
-          <form onSubmit={handleSubmit}>
-            <div className="welcome-text">Welcome {apiData?.user?.name} !</div>
-            <div className="button-and-balance">
-              <div>
-                {apiData?.user?.money && (
-                  <div className="points-and-text">
-                    <span className="bold-text">Points :</span>{" "}
-                    {apiData?.user?.money?.inAccount}
-                  </div>
-                )}
-                <div className="points-and-text">
-                  <span className="bold-text">In Hold:</span>{" "}
-                  {calculateTotalAmount(apiData?.user?.money?.inHold)}
-                </div>
-              </div>
-              <Button
-                onClick={() => navigate("/audit")}
-                type="primary"
-              >
-                OTP History
-              </Button>
+    <div className="form-list-container" style={{ background: "#fff" }}>
+      <div className="welcome-text">Welcome {apiData?.user?.name} !</div>
+      <div className="button-and-balance">
+        <div>
+          {apiData?.user?.money && (
+            <div className="points-and-text">
+              <span className="bold-text">Points :</span>{" "}
+              {totalPoints.toFixed(2)}
             </div>
-            <h1>Generate OTP for IRCTC (₹ 0 )</h1>
-            {[0, 1, 2, 3, 4].map((index) => (
-              <div key={index} className="row">
-                <Field name={`loading[${index}]`} initialValue={false}>
-                  {({ input }) => (
-                    <>
-                      <Button
-                        onClick={() => callApi(index, form, values)}
-                        disabled={input.value}
-                        loading={input.value}
-                      >
-                        Buy Next
-                      </Button>
-                      <Button
-                        onClick={() => cancelNumber(index, form, values)}
-                        // disabled={!cancelButtonEnabled[index]}
-                        loading={input.value}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={() => resendOtp(index, form, values)}
-                        disabled={!resendButtonEnabled[index]} // Use state to enable/disable Resend OTP button
-                        loading={input.value}
-                      >
-                        Resend OTP
-                      </Button>
-                    </>
-                  )}
-                </Field>
-                <Field
-                  name={`number[${index}]`}
-                  initialValue=""
-                  subscription={{ value: true }}
+          )}
+          <div className="points-and-text">
+            <span className="bold-text">In Hold:</span>{" "}
+            {Number(moneyInHold).toFixed(2)}
+          </div>
+        </div>
+        <Button onClick={() => navigate("/audit")} type="primary">
+          OTP History
+        </Button>
+      </div>
+      <h1>
+        Generate OTP for{" "}
+        <span style={{ textTransform: "capitalize" }}>
+          {location?.state?.serviceName}
+        </span>{" "}
+        (₹ {location?.state?.amount.toFixed(2)} )
+      </h1>
+      {[0, 1, 2, 3, 4].map((index) => (
+        <div key={index} className="row">
+          <Field name={`loading[${index}]`} initialValue={false}>
+            {({ input }) => (
+              <>
+                <Button
+                  onClick={() => callApi(index, form, values)}
+                  disabled={input.value}
+                  loading={input.value}
                 >
-                  {({ input: numberInput }) => (
-                    <>
-                      <Input
-                        type="text"
-                        disabled
-                        value={numberInput.value}
-                        onChange={(e) => numberInput.onChange(e.target.value)}
-                        addonAfter={
-                          <CopyToClipboard
-                            text={numberInput.value}
-                            onCopy={() =>
-                              handleCopyToClipboard(numberInput.value)
-                            }
-                          >
-                            <Button icon={<CopyOutlined />} />
-                          </CopyToClipboard>
-                        }
-                      />
-                      <Field
-                        name={`otp[${index}]`}
-                        subscription={{ value: true }}
-                      >
-                        {({ input: otpInput }) => (
-                          <Input
-                            disabled
-                            type="text"
-                            placeholder="Enter OTP"
-                            value={otpInput.value}
-                            onChange={(e) => otpInput.onChange(e.target.value)}
-                          />
-                        )}
-                      </Field>
-                      <span className="timer">
-                        {timerValues[index] === 60
-                          ? `1:00`
-                          : `00:${timerValues[index]}`}
-                      </span>
-                    </>
+                  Buy Next
+                </Button>
+                <Button
+                  onClick={() => cancelNumber(index, form, values)}
+                  // disabled={!cancelButtonEnabled[index]}
+                  loading={input.value}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => resendOtp(index, form, values)}
+                  // disabled={!resendButtonEnabled[index]} // Use state to enable/disable Resend OTP button
+                  loading={input.value}
+                >
+                  Resend OTP
+                </Button>
+              </>
+            )}
+          </Field>
+          <Field
+            name={`number[${index}]`}
+            initialValue=""
+            subscription={{ value: true }}
+          >
+            {({ input: numberInput }) => (
+              <>
+                <Input
+                  type="text"
+                  disabled
+                  value={numberInput.value}
+                  onChange={(e) => numberInput.onChange(e.target.value)}
+                  addonAfter={
+                    <CopyToClipboard
+                      text={numberInput.value}
+                      onCopy={() => handleCopyToClipboard(numberInput.value)}
+                    >
+                      <Button icon={<CopyOutlined />} />
+                    </CopyToClipboard>
+                  }
+                />
+                <Field name={`otp[${index}]`} subscription={{ value: true }}>
+                  {({ input: otpInput }) => (
+                    <Input
+                      disabled
+                      type="text"
+                      placeholder="Enter OTP"
+                      value={otpInput.value}
+                      onChange={(e) => otpInput.onChange(e.target.value)}
+                    />
                   )}
                 </Field>
-              </div>
-            ))}
-          </form>
-        )}
-      />
+                <span className="timer">
+                  {timerValues[index] === 60
+                    ? `1:00`
+                    : `00:${timerValues[index]}`}
+                </span>
+              </>
+            )}
+          </Field>
+        </div>
+      ))}
       <ToastContainer />
+      {moneyModal && (
+        <NoMoneyModal
+          openModal={moneyModal}
+          cancelModal={() => setMoneyModal(false)}
+        />
+      )}
     </div>
   );
 };

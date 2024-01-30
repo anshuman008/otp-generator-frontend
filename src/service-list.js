@@ -2,22 +2,26 @@ import React, { useEffect, useState } from "react";
 import "./service-list.scss";
 import { Button, Spin, Divider, Input, Select } from "antd";
 import { numberApi, userApi } from "./api";
-import { isNotEmptyArray } from "./utils";
+import { isEmptyString, isNotEmptyArray } from "./utils";
 import { useNavigate } from "react-router-dom";
 import { FilterIcon2 } from "./images";
 import { Field, Form } from "react-final-form";
 import axios from "axios";
+import { LogoutOutlined } from "@ant-design/icons";
 
 const { Option } = Select;
 
 const ServiceList = () => {
-  const userToken = localStorage.getItem("user");
   const [listData, setListData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchStr, setSearchStr] = useState("");
+  const [serviceSearch, setServiceSearch] = useState("");
   const [serviceList, setServiceList] = useState([]);
   const [selectedService, setSelectedService] = useState("");
-  const [selectedServiceName, setSelectedServiceName] = useState("");
+  const [selectedServiceName, setSelectedServiceName] = useState({
+    id: "",
+    name: "",
+  });
   const [sortOrder, setSortOrder] = useState(0);
   const navigate = useNavigate();
 
@@ -36,24 +40,26 @@ const ServiceList = () => {
 
   useEffect(() => {
     setLoading(true);
-    axios
-      .get(`http://localhost:5001/country/get-prices/${selectedService}`, {
-        wholesale: 0,
-        user: "guest",
-        page: 1,
-      })
-      .then(
-        (res) => {
-          setLoading(false);
-          if (isNotEmptyArray(res?.data)) {
-            setListData(res.data);
+    if (selectedService) {
+      axios
+        .get(`http://localhost:5001/country/get-prices/${selectedService}`, {
+          wholesale: 0,
+          user: "guest",
+          page: 1,
+        })
+        .then(
+          (res) => {
+            setLoading(false);
+            if (isNotEmptyArray(res?.data)) {
+              setListData(res.data);
+            }
+          },
+          (err) => {
+            setLoading(false);
+            console.error("Error fetching data:", err);
           }
-        },
-        (err) => {
-          setLoading(false);
-          console.error("Error fetching data:", err);
-        }
-      );
+        );
+    }
   }, [selectedService]);
 
   function convertToTitleCase(str) {
@@ -130,8 +136,31 @@ const ServiceList = () => {
     setListData([...sortedData]);
   }
 
+  const handleSearch = (e) => {
+    const filteredList = [...serviceList];
+    if (!e) {
+      setServiceList([...serviceList]);
+    }
+    if (e) {
+      const newList = filteredList.filter((country) =>
+        country.name.toLowerCase().includes(e.toLowerCase())
+      );
+      setServiceList(newList);
+    }
+  };
+
   return (
     <div className="form-list-container">
+      <div className="logout-btn" style={{ top: "30px" }}>
+        <Button
+          onClick={() => {
+            localStorage.removeItem("user");
+            navigate("/");
+          }}
+        >
+          <LogoutOutlined /> Logout
+        </Button>
+      </div>
       <div
         style={{
           height: "41px",
@@ -153,8 +182,10 @@ const ServiceList = () => {
                     {...input}
                     showSearch
                     className="service-field"
+                    allowClear
                     style={{ width: "100%" }}
                     value={selectedService}
+                    onSearch={(e) => handleSearch(e)}
                     onChange={(e) => {
                       setSelectedService(e);
                     }}
@@ -162,17 +193,28 @@ const ServiceList = () => {
                   >
                     {isNotEmptyArray(serviceList) &&
                       serviceList.map((service) => (
-                        <Option
-                          key={service.id}
-                          value={service.id}
-                          onChange={() => console.log(service, "ser")}
-                        >
-                          <img src={service.icon} />
+                        <Option key={service.id} value={service.id}>
+                          <img
+                            src={service.icon}
+                            onClick={() =>
+                              setSelectedServiceName({
+                                id: service?.external_id,
+                                name: service?.name,
+                              })
+                            }
+                          />
                           <span
                             onClick={() =>
-                              setSelectedServiceName(service?.external_id)
+                              setSelectedServiceName({
+                                id: service?.external_id,
+                                name: service?.name,
+                              })
                             }
-                            style={{ width: "calc(100% - 33px)" }}
+                            style={{
+                              width: "calc(100% - 33px)",
+                              display: "flex",
+                              alignItems: "center",
+                            }}
                           >
                             {service.name}
                           </span>
@@ -255,14 +297,23 @@ const ServiceList = () => {
                       <div className="right-contents">
                         <div className="quantity">{country?.count}</div>
                         <Divider type="vertical" />
-                        <div className="price">₹ {country?.price }</div>
+                        <div className="price">
+                          ₹{" "}
+                          {(
+                            (Number(country?.price) * 20) / 100 +
+                            Number(country?.price)
+                          ).toFixed(2)}
+                        </div>
                         <div className="buy-btn">
                           <Button
                             onClick={() =>
                               navigate("/listing", {
                                 state: {
-                                  service: selectedServiceName,
-                                  amount: country.price,
+                                  service: selectedServiceName?.id,
+                                  serviceName: selectedServiceName?.name,
+                                  amount:
+                                    (Number(country?.price) * 20) / 100 +
+                                    Number(country?.price),
                                   countryName: country.country_slug,
                                   country: country.country_external_id,
                                 },

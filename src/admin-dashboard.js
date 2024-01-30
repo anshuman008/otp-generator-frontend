@@ -9,7 +9,7 @@ import {
   CategoryScale,
   LinearScale,
 } from "chart.js";
-import { isNotEmptyArray, isNotEmptyObject } from "./utils";
+import { isNotEmptyObject } from "./utils";
 import { adminApi } from "./api";
 import axios from "axios";
 

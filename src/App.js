@@ -1,6 +1,5 @@
 import { Routes, Route, BrowserRouter, Navigate } from "react-router-dom";
 import FormList from "./form-list";
-import BuyNumber from "./buyNumber";
 import AuditTable from "./audit-table";
 import "./form-list.scss";
 import CreateUser from "./create-user";
@@ -8,6 +7,7 @@ import RechargeUser from "./recharge-user";
 import ServiceList from "./service-list";
 import AdminDashboard from "./admin-dashboard";
 import PageTransition from "./page-transition";
+import RootForm from "./root-form";
 
 const ProtectedRoute = ({ children }) => {
   const isAdmin = localStorage.getItem("admin");
@@ -45,7 +45,7 @@ const App = () => {
             element={
               <UserProtected>
                 <PageTransition>
-                  <BuyNumber />
+                  <RootForm />
                 </PageTransition>
               </UserProtected>
             }
