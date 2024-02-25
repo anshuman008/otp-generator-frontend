@@ -13,10 +13,12 @@ const { Option } = Select;
 
 const ServiceList = () => {
   const [listData, setListData] = useState([]);
+  const [permanentData,setPermanentList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchStr, setSearchStr] = useState("");
   const [serviceSearch, setServiceSearch] = useState("");
   const [serviceList, setServiceList] = useState([]);
+  const [filteredServiceList, setFilteredServiceList] = useState([]);
   const [selectedService, setSelectedService] = useState("");
   const [selectedServiceName, setSelectedServiceName] = useState({
     id: "",
@@ -42,7 +44,7 @@ const ServiceList = () => {
     setLoading(true);
     if (selectedService) {
       axios
-        .get(`http://localhost:5001/country/get-prices/${selectedService}`, {
+        .get(`https://gxout2ygj1.execute-api.ap-south-1.amazonaws.com/country/get-prices/${selectedService}`, {
           wholesale: 0,
           user: "guest",
           page: 1,
@@ -52,6 +54,7 @@ const ServiceList = () => {
             setLoading(false);
             if (isNotEmptyArray(res?.data)) {
               setListData(res.data);
+              setPermanentList(res.data);
             }
           },
           (err) => {
@@ -71,8 +74,19 @@ const ServiceList = () => {
 
   const onSearch = (e) => {
     setSearchStr(e);
-    const originalData = [...listData];
-    const newArray = listData?.find((el) => el.country_slug?.includes(e));
+    const originalData = [...permanentData];
+    
+
+
+    let newArray = [];
+   
+    for(let i = 0; i<originalData.length; i++){
+      if(originalData[i].country_slug.includes(e)) newArray.push(originalData[i]);
+    }
+
+    let len = newArray.length;
+
+     
     if (isNotEmptyArray(newArray)) {
       setListData([...newArray]);
     } else {
@@ -136,17 +150,11 @@ const ServiceList = () => {
     setListData([...sortedData]);
   }
 
-  const handleSearch = (e) => {
-    const filteredList = [...serviceList];
-    if (!e) {
-      setServiceList([...serviceList]);
-    }
-    if (e) {
-      const newList = filteredList.filter((country) =>
-        country.name.toLowerCase().includes(e.toLowerCase())
-      );
-      setServiceList(newList);
-    }
+  const filterOption = (input, option, list) => {
+    return (
+      option.key.toLowerCase().includes(input.toLowerCase()) ||
+      option.key.toString().includes(input)
+    );
   };
 
   return (
@@ -182,18 +190,18 @@ const ServiceList = () => {
                     {...input}
                     showSearch
                     className="service-field"
-                    allowClear
                     style={{ width: "100%" }}
+                    filterOption={filterOption}
                     value={selectedService}
-                    onSearch={(e) => handleSearch(e)}
                     onChange={(e) => {
+                      // console.log(e,'select huaa')
                       setSelectedService(e);
                     }}
                     placeholder="Select a country..."
                   >
                     {isNotEmptyArray(serviceList) &&
                       serviceList.map((service) => (
-                        <Option key={service.id} value={service.id}>
+                        <Option key={service.name} value={service.id}>
                           <img
                             src={service.icon}
                             onClick={() =>

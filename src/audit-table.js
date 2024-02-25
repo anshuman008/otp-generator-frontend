@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Table, Input, Pagination, Button } from "antd";
+import { Table, Input, Pagination, Button, Tooltip } from "antd";
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
@@ -33,11 +33,17 @@ const AuditTable = () => {
 
   useEffect(() => {
     // Make your API call based on the current page and page size
-    fetch(`http://localhost:5001/user/me/logs`, {
+    fetch(`https://gxout2ygj1.execute-api.ap-south-1.amazonaws.com/user/me/logs`, {
       headers: { Authorization: `Bearer ${isUser}` },
     })
       .then((response) => response.json())
-      .then((data) => setApiData(data))
+      .then((data) => {
+        const newData = data.map((el) => {
+          const { amount } = el;
+          return { ...el, amount: amount.toFixed(2) };
+        });
+        setApiData(newData);
+      })
       .catch((error) => console.error("Error fetching data:", error));
   }, [currentPage, pageSize]);
 
@@ -51,6 +57,25 @@ const AuditTable = () => {
       title: "Service",
       dataIndex: "otpGenerratedFor",
       key: "otpGenerratedFor",
+      render: (text) => (
+        <Tooltip
+          getPopupContainer={(triggerNode) => triggerNode.parentNode}
+          placement="bottomRight"
+          fresh
+          title={text}
+        >
+          <div
+            style={{
+              width: "110px",
+              textOverflow: "ellipsis",
+              overflow: "hidden",
+              whiteSpace: "pre",
+            }}
+          >
+            {text}
+          </div>
+        </Tooltip>
+      ),
     },
     {
       title: "Price",
@@ -79,7 +104,7 @@ const AuditTable = () => {
       dataIndex: "status",
       key: "status",
       render: (status) =>
-        status === ("success") ? (
+        status === "success" ? (
           <CheckCircleOutlined style={{ color: "green" }} />
         ) : (
           <CloseCircleOutlined style={{ color: "red" }} />
@@ -89,8 +114,8 @@ const AuditTable = () => {
       title: "OTP",
       dataIndex: "otp",
       key: "otp",
-      width: '130px'
-    }
+      width: "130px",
+    },
   ];
 
   const startIdx = (currentPage - 1) * pageSize;
@@ -102,21 +127,24 @@ const AuditTable = () => {
   return (
     <div className="table-container">
       <div className="back-btn">
-        <Button
-          onClick={() => navigate(-1)}
-        >
+        <Button onClick={() => navigate(-1)}>
           <ArrowLeftOutlined /> Back
         </Button>
       </div>
       <div className="inner-div">
         <div className="otp-heading">OTP History</div>
-        <Table style={{ height: 'calc(100% - 200px)', overflow: 'auto' }} columns={columns} dataSource={displayedData} pagination={false} />
+        <Table
+          style={{ height: "calc(100% - 200px)", overflow: "auto" }}
+          columns={columns}
+          dataSource={displayedData}
+          pagination={false}
+        />
         <Pagination
           total={apiData.length}
           pageSize={pageSize}
           current={currentPage}
           onChange={handlePageChange}
-          onShowSizeChange={handlePageSizeChange} 
+          onShowSizeChange={handlePageSizeChange}
           showTotal={(total) => `Total ${total} items`}
         />
       </div>

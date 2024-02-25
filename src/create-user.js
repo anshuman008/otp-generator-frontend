@@ -10,7 +10,7 @@ const CreateUser = () => {
   const isAdmin = localStorage.getItem("admin");
   const navigate = useNavigate();
 
-  const API_URL = "http://localhost:5001";
+  const API_URL = "https://gxout2ygj1.execute-api.ap-south-1.amazonaws.com";
 
   const handleSubmit = async (e) => {
     e.preventDefault();

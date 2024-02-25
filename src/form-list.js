@@ -57,7 +57,7 @@ const UserLogin = ({ api }) => {
     }
 
     try {
-      if (captchaValue) {
+      // if (captchaValue) {
         console.log("Captcha verification successful");
         try {
           const response = await fetch(api.login, {
@@ -90,9 +90,9 @@ const UserLogin = ({ api }) => {
           console.log('in')
           console.error("Login:", error.message);
         }
-      } else {
-        console.error("Captcha verification failed");
-      }
+      // } else {
+      //   console.error("Captcha verification failed");
+      // }
     } catch (error) {
       console.error("Error verifying captcha:", error.message);
     }
@@ -122,12 +122,12 @@ const UserLogin = ({ api }) => {
           />
           {errors.otp && <div className="error-message">{errors.otp}</div>}
         </label>
-        <div className="captcha">
+        {/* <div className="captcha">
           <ReCAPTCHA
             sitekey="6LdNNywpAAAAAEI8bhOkK2F0hLYO81i6lPsh7BI3"
             onChange={handleCaptchaChange}
           />
-        </div>
+        </div> */}
         <button type="submit">Submit</button>
       </form>
     </div>

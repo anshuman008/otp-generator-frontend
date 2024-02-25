@@ -31,6 +31,9 @@
       pointer-events: none;
     }
   }
+  .ant-tooltip-placement-bottomRight {
+    padding: 0;
+  }
   .ant-pagination .ant-pagination-item-active {
     color: #1677ff;
     border: 1px solid #1677ff;

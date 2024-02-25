@@ -19,21 +19,14 @@ const BuyNumber = ({ values, form }) => {
   const [moneyModal, setMoneyModal] = useState(false);
   const [apiData, setApiData] = useState([]);
   const userToken = localStorage.getItem("user");
-  const [cancelButtonEnabled, setCancelButtonEnabled] = useState([
-    false,
-    false,
-    false,
-    false,
-    false,
-  ]);
+  const [resendButtonEnabled, setResendButtonEnabled] = useState(true);
 
-  const socket = io("http://localhost:5001", {
+  const socket = io("wss://0mqp01qzp5.execute-api.ap-south-1.amazonaws.com/dev", {
     auth: {
       token: userToken,
     },
     cors: {
-      origin: "http://localhost:5001",
-      methods: ["GET", "POST"],
+      origin: "wss://0mqp01qzp5.execute-api.ap-south-1.amazonaws.com/dev"
     },
   });
 
@@ -74,14 +67,6 @@ const BuyNumber = ({ values, form }) => {
       })
       .catch((error) => console.error("Error fetching data:", error));
   }, []);
-
-  const disableCancelButton = (index) => {
-    setCancelButtonEnabled((prevValues) => {
-      const newValues = [...prevValues];
-      newValues[index] = false;
-      return newValues;
-    });
-  };
 
   const moneyInHold =
     apiData?.user?.money?.inHold
@@ -171,6 +156,14 @@ const BuyNumber = ({ values, form }) => {
           });
         }
       } catch (error) {
+        toast.error("Something went wrong!", {
+          position: "top-right",
+          autoClose: 2000,
+          hideProgressBar: true,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+        });
         console.error("Error handling server response:", error.message);
       } finally {
         setLoading(false);
@@ -179,14 +172,14 @@ const BuyNumber = ({ values, form }) => {
   };
 
   socket.on("otpResponse", (response) => {
+    console.log(response, "response");
     try {
       if (response.data) {
         const fieldIndex = form
           .getState()
           .values.number.indexOf(response.number);
         form.change(`otp[${fieldIndex}]`, response.data);
-      } else {
-        toast.error(response.msg, {
+        toast.success("OTP Recieved Successfully", {
           position: "top-right",
           autoClose: 2000,
           hideProgressBar: true,
@@ -194,26 +187,32 @@ const BuyNumber = ({ values, form }) => {
           pauseOnHover: true,
           draggable: true,
         });
+        setResendButtonEnabled(true);
+        console.log(fieldIndex, "send");
       }
     } catch (error) {
-      console.error("Error calling cancelNumber API:", error.message);
+      console.error("Something went wrong!", error.message);
     } finally {
       setLoading(false);
     }
   });
 
   const resendOtp = async (index, form, values) => {
+    setResendButtonEnabled(false);
+    form.change(`otp[${index}]`, "");
     socket.emit("resendOtp", {
       id: values?.activationId[index],
       phoneNumber: values?.number[index],
     });
     socket.once("resendResponse", (response) => {
+      console.log(response, "resend response");
       try {
         if (response.data) {
           const fieldIndex = form
             .getState()
             .values.number.indexOf(response.number);
           form.change(`otp[${fieldIndex}]`, response.data);
+          console.log(fieldIndex, "resend");
         } else {
           toast.error(response.msg, {
             position: "top-right",
@@ -225,7 +224,7 @@ const BuyNumber = ({ values, form }) => {
           });
         }
       } catch (error) {
-        console.error("Error calling cancelNumber API:", error.message);
+        console.error("Something went wrong!", error.message);
       } finally {
         setLoading(false);
       }
@@ -233,39 +232,63 @@ const BuyNumber = ({ values, form }) => {
   };
 
   const callApi = (index, form) => {
-    if (totalPoints <= 1) {
+    form.change(`number[${index}]`, "");
+    form.change(`otp[${index}]`, "");
+   
+    if ((totalPoints <= 1) || (totalPoints < location?.state?.amount)) {
       setMoneyModal(true);
-    }
-    try {
-      setLoading(true);
-      disableCancelButton(index);
-      const { amount, service, country, countryName } = location?.state;
-
-      socket.emit("getNumber", {
-        amount: amount,
-        service: service,
-        country: country,
-        countryName: countryName,
-      });
-
-      socket.once("responseA", (data) => {
-        try {
-          console.log("Response A:", data);
-
-          const numberSequence = data?.data?.split(":").pop().substring(2);
-          const activationNum = data?.data?.split(":")[1];
-
-          form.change(`number[${index}]`, numberSequence);
-          form.change(`activationId[${index}]`, activationNum);
-        } catch (error) {
-          console.error("Error handling server response:", error.message);
-        } finally {
-          setLoading(false);
-        }
-      });
-    } catch (error) {
-      console.error("Error calling API:", error.message);
-      setLoading(false);
+    } else {
+      try {
+        setLoading(true);
+        const { amount, service, country, countryName } = location?.state;
+  
+        socket.emit("getNumber", {
+          amount: amount,
+          service: service,
+          country: country,
+          countryName: countryName,
+        });
+  
+        socket.once("responseA", (data) => {
+          try {
+            console.log(data, 'darta')
+            if (data.error || data?.data?.includes("NO_BALANCE")) {
+              setMoneyModal(true);
+            } else if(data?.data.includes("NO_NUMBERS")) {
+              toast.error("No numbers found! Please try again.", {
+                position: "top-right",
+                autoClose: 2000,
+                hideProgressBar: true,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+              });
+            } else {
+              // if(data?.data?.includes())
+              console.log("Response A:", data);
+              const numberSequence = data?.data?.split(":").pop().substring(2);
+              const activationNum = data?.data?.split(":")[1];
+  
+              form.change(`number[${index}]`, numberSequence);
+              form.change(`activationId[${index}]`, activationNum);
+            }
+          } catch (error) {
+            toast.error("Something went wrong!", {
+              position: "top-right",
+              autoClose: 2000,
+              hideProgressBar: true,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+            });
+          } finally {
+            setLoading(false);
+          }
+        });
+      } catch (error) {
+        console.error("Error calling API:", error.message);
+        setLoading(false);
+      }
     }
   };
 
@@ -290,6 +313,7 @@ const BuyNumber = ({ values, form }) => {
       });
     }
   };
+  console.log(values, 'values')
 
   return (
     <div className="form-list-container" style={{ background: "#fff" }}>
@@ -311,13 +335,15 @@ const BuyNumber = ({ values, form }) => {
           OTP History
         </Button>
       </div>
-      <h1>
-        Generate OTP for{" "}
-        <span style={{ textTransform: "capitalize" }}>
-          {location?.state?.serviceName}
-        </span>{" "}
-        (₹ {location?.state?.amount.toFixed(2)} )
-      </h1>
+      <div className="heading-box">
+        <h1>
+          Generate OTP for{" "}
+          <span style={{ textTransform: "capitalize" }}>
+            {location?.state?.serviceName}
+          </span>{" "}
+          (₹ {location?.state?.amount.toFixed(2)} )
+        </h1>
+      </div>
       {[0, 1, 2, 3, 4].map((index) => (
         <div key={index} className="row">
           <Field name={`loading[${index}]`} initialValue={false}>
@@ -339,6 +365,7 @@ const BuyNumber = ({ values, form }) => {
                 </Button>
                 <Button
                   onClick={() => resendOtp(index, form, values)}
+                  // disabled={values.otp[index] ? false : true} 
                   // disabled={!resendButtonEnabled[index]} // Use state to enable/disable Resend OTP button
                   loading={input.value}
                 >

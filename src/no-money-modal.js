@@ -18,8 +18,7 @@ const NoMoneyModal = ({ openModal, cancelModal }) => {
         </div>
         <div className="no-money-message">
           We're sorry, but there is not enough money in your account to complete
-          this transaction. Please ensure that your account has sufficient funds
-          and try again.
+          this transaction. Please contact admin to get your account recharged.
         </div>
       </Modal>
     </div>
