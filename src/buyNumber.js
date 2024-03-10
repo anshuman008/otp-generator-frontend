@@ -1,9 +1,9 @@
-import React, { useEffect, useRef, useState } from "react";
-import { Field } from "react-final-form";
-import { Input, Button } from "antd";
-import { CopyOutlined } from "@ant-design/icons";
-import { CopyToClipboard } from "react-copy-to-clipboard";
-import { toast, ToastContainer } from "react-toastify";
+import React, { useEffect, useState } from 'react';
+import { Field } from 'react-final-form';
+import { Button, Input } from 'antd';
+import { CopyToClipboard } from 'react-copy-to-clipboard';
+import { CopyOutlined } from '@ant-design/icons';
+import { toast, ToastContainer } from 'react-toastify';
 import "react-toastify/dist/ReactToastify.css";
 import "./buyNumber.scss";
 import io from "socket.io-client";
@@ -14,6 +14,7 @@ import NoMoneyModal from "./no-money-modal";
 const BuyNumber = ({ values, form }) => {
   const [loading, setLoading] = useState(false);
   const [timerValues, setTimerValues] = useState([300, 60, 60, 60, 60]);
+  const [cancelButtonDisabled, setCancelButtonDisabled] = useState(Array(5).fill(false));
   const navigate = useNavigate();
   const location = useLocation();
   const [moneyModal, setMoneyModal] = useState(false);
@@ -21,12 +22,12 @@ const BuyNumber = ({ values, form }) => {
   const userToken = localStorage.getItem("user");
   const [resendButtonEnabled, setResendButtonEnabled] = useState(true);
 
-  const socket = io("wss://0mqp01qzp5.execute-api.ap-south-1.amazonaws.com/dev", {
+  const socket = io("http://localhost:3001", {
     auth: {
       token: userToken,
     },
     cors: {
-      origin: "wss://0mqp01qzp5.execute-api.ap-south-1.amazonaws.com/dev"
+      origin: "http://localhost:3001"
     },
   });
 
@@ -43,6 +44,7 @@ const BuyNumber = ({ values, form }) => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, []);
+
   useEffect(() => {
     fetch(numberApi.me, {
       headers: { Authorization: `Bearer ${userToken}` },
@@ -74,6 +76,13 @@ const BuyNumber = ({ values, form }) => {
       .reduce((total, currentAmount) => total + (currentAmount || 0), 0)
       .toFixed(2) || 0;
   const totalPoints = apiData?.user?.money?.inAccount - moneyInHold;
+
+  const startCancelTimer = (index) => {
+    setCancelButtonDisabled(prev => prev.map((item, idx) => idx === index ? true : item));
+    setTimeout(() => {
+      setCancelButtonDisabled(prev => prev.map((item, idx) => idx === index ? false : item));
+    }, 120000);
+  };
 
   socket.on("cancelOperation", (response) => {
     try {
@@ -251,8 +260,8 @@ const BuyNumber = ({ values, form }) => {
   
         socket.once("responseA", (data) => {
           try {
-            console.log(data, 'darta')
-            if (data.error || data?.data?.includes("NO_BALANCE")) {
+            console.log(data, 'data')
+            if (data?.data?.includes("NO_BALANCE")) {
               setMoneyModal(true);
             } else if(data?.data.includes("NO_NUMBERS")) {
               toast.error("No numbers found! Please try again.", {
@@ -264,13 +273,11 @@ const BuyNumber = ({ values, form }) => {
                 draggable: true,
               });
             } else {
-              // if(data?.data?.includes())
-              console.log("Response A:", data);
               const numberSequence = data?.data?.split(":").pop().substring(2);
               const activationNum = data?.data?.split(":")[1];
-  
               form.change(`number[${index}]`, numberSequence);
               form.change(`activationId[${index}]`, activationNum);
+              startCancelTimer(index); // Start the timer when number is received
             }
           } catch (error) {
             toast.error("Something went wrong!", {
@@ -313,7 +320,6 @@ const BuyNumber = ({ values, form }) => {
       });
     }
   };
-  console.log(values, 'values')
 
   return (
     <div className="form-list-container" style={{ background: "#fff" }}>
@@ -350,7 +356,7 @@ const BuyNumber = ({ values, form }) => {
             {({ input }) => (
               <>
                 <Button
-                  onClick={() => callApi(index, form, values)}
+                  onClick={() => callApi(index, form)}
                   disabled={input.value}
                   loading={input.value}
                 >
@@ -358,15 +364,14 @@ const BuyNumber = ({ values, form }) => {
                 </Button>
                 <Button
                   onClick={() => cancelNumber(index, form, values)}
-                  // disabled={!cancelButtonEnabled[index]}
+                  disabled={cancelButtonDisabled[index]}
                   loading={input.value}
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={() => resendOtp(index, form, values)}
-                  // disabled={values.otp[index] ? false : true} 
-                  // disabled={!resendButtonEnabled[index]} // Use state to enable/disable Resend OTP button
+                  disabled={!resendButtonEnabled}
                   loading={input.value}
                 >
                   Resend OTP
@@ -407,7 +412,7 @@ const BuyNumber = ({ values, form }) => {
                   )}
                 </Field>
                 <span className="timer">
-                  {timerValues[index] === 60
+                  {timerValues[index] === 300
                     ? `1:00`
                     : `00:${timerValues[index]}`}
                 </span>
